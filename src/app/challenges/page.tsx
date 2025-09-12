@@ -52,15 +52,17 @@ export default function ChallengesPage() {
   const [errors, setErrors] = useState<ValidationError[]>([])
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showHint, setShowHint] = useState(false)
-  const [challenges, setChallenges] = useState<Challenge[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [completedChallenges, setCompletedChallenges] = useState<string[]>([])
+  const [loadingCompleted, setLoadingCompleted] = useState(true)
   const [currentChallengeIndex, setCurrentChallengeIndex] = useState<{[key: string]: number}>({
     javascript: 0,
     python: 0,
     java: 0,
     cpp: 0
   })
+  const [challenges, setChallenges] = useState<Challenge[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
 
   // Language-specific background elements
@@ -117,44 +119,68 @@ export default function ChallengesPage() {
 
   const languageElements = getLanguageBackgroundElements(selectedLanguage)
 
-  // Function to fetch challenges from Supabase
+  // Function to fetch challenges from database
   const fetchChallenges = async () => {
     try {
       setLoading(true)
       setError(null)
-
-      const { data, error } = await supabase
+      
+      const { data, error: fetchError } = await supabase
         .from('challenges')
         .select('*')
         .order('created_at', { ascending: true })
 
-      if (error) {
-        throw error
+      if (fetchError) {
+        console.error('Error fetching challenges:', fetchError)
+        setError('Failed to load challenges. Please try again.')
+        return
       }
 
       setChallenges(data || [])
-    } catch (err: unknown) {
+    } catch (err) {
       console.error('Error fetching challenges:', err)
-      setError('Failed to load challenges. Please try again later.')
-      toast.error('Failed to load challenges', {
-        duration: 4000,
-        style: {
-          background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
-          color: '#fff',
-          borderRadius: '12px',
-          padding: '16px',
-          fontSize: '16px',
-          fontWeight: 'bold',
-        },
-      })
+      setError('Failed to load challenges. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  // Load challenges on component mount
+  // Function to fetch completed challenges for current user
+  const fetchCompletedChallenges = async () => {
+    try {
+      setLoadingCompleted(true)
+      
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setCompletedChallenges([])
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('user_challenges')
+        .select('challenge_id')
+        .eq('user_id', user.id)
+        .eq('status', 'completed')
+
+      if (error) {
+        console.error('Error fetching completed challenges:', error)
+        setCompletedChallenges([])
+        return
+      }
+
+      setCompletedChallenges(data?.map(item => item.challenge_id) || [])
+    } catch (err) {
+      console.error('Error fetching completed challenges:', err)
+      setCompletedChallenges([])
+    } finally {
+      setLoadingCompleted(false)
+    }
+  }
+
+  // Load challenges and completed challenges on component mount
   useEffect(() => {
     fetchChallenges()
+    fetchCompletedChallenges()
   }, [])
   const checkForMaliciousCode = (code: string, language: string): MaliciousPattern[] => {
     const maliciousPatterns: MaliciousPattern[] = []
@@ -1180,9 +1206,8 @@ export default function ChallengesPage() {
                     </p>
                   </div>
                 </div>
-                <div className="hidden sm:flex items-center space-x-2 text-sm text-muted-foreground">
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                   <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold">
-                    {languageChallenges.length} Challenges Available
                   </span>
                 </div>
               </div>
