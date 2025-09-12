@@ -171,30 +171,37 @@ export default function ChallengesPage() {
     }
   }
 
-  // Function to fetch completed challenges for current user
+  // Function to fetch completed challenges from database
   const fetchCompletedChallenges = async () => {
     try {
       setLoadingCompleted(true)
-      
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+
+      // Get user ID from localStorage or authentication
+      const userId = localStorage.getItem('user_id')
+
+      // If no valid user ID, skip fetching completed challenges
+      if (!userId || userId === 'anonymous') {
+        console.log('No valid user ID found, skipping completed challenges fetch')
         setCompletedChallenges([])
         return
       }
 
-      const { data, error } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('user_challenges')
         .select('challenge_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('status', 'completed')
 
-      if (error) {
-        console.error('Error fetching completed challenges:', error)
+      if (fetchError) {
+        console.error('Error fetching completed challenges:', fetchError)
+        // Don't show error for completed challenges, just set empty array
         setCompletedChallenges([])
         return
       }
 
-      setCompletedChallenges(data?.map(item => item.challenge_id) || [])
+      // Extract challenge IDs from the results
+      const completedIds = data?.map(item => item.challenge_id) || []
+      setCompletedChallenges(completedIds)
     } catch (err) {
       console.error('Error fetching completed challenges:', err)
       setCompletedChallenges([])
@@ -203,10 +210,100 @@ export default function ChallengesPage() {
     }
   }
 
+  // Function to check and reload data if needed
+  const checkAndReloadData = async () => {
+    try {
+      // Check if challenges data is valid
+      if (!challenges || challenges.length === 0) {
+        console.log('Challenges data is empty, reloading...')
+        await fetchChallenges()
+      }
+
+      // Check if completed challenges data is valid
+      if (completedChallenges.length === 0) {
+        console.log('Completed challenges data is empty, reloading...')
+        await fetchCompletedChallenges()
+      }
+
+      // Check if current challenge exists
+      const currentLangChallenges = challenges.filter(challenge => challenge.language === selectedLanguage)
+      const currentIndex = currentChallengeIndex[selectedLanguage] || 0
+      
+      if (!currentLangChallenges[currentIndex]) {
+        console.log('Current challenge not found, resetting to first challenge...')
+        setCurrentChallengeIndex(prev => ({
+          ...prev,
+          [selectedLanguage]: 0
+        }))
+      }
+    } catch (error) {
+      console.error('Error checking and reloading data:', error)
+      // Show user-friendly error message
+      toast.error('Failed to load data. Please refresh the page.', {
+        duration: 5000,
+        style: {
+          background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+          color: '#fff',
+          borderRadius: '12px',
+          padding: '16px',
+          fontSize: '14px',
+          fontWeight: 'bold',
+        },
+        icon: '❌',
+      })
+    }
+  }
+
   // Load challenges and completed challenges on component mount
   useEffect(() => {
     fetchChallenges()
     fetchCompletedChallenges()
+  }, [])
+
+  // Handle page navigation and data reloading
+  useEffect(() => {
+    const handlePageNavigation = () => {
+      // Check if we need to reload data
+      if (!loading && challenges.length === 0) {
+        console.log('Reloading challenges due to navigation...')
+        checkAndReloadData()
+      }
+    }
+
+    // Listen for navigation events
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page became visible again, check if data needs reloading
+        handlePageNavigation()
+      }
+    }
+
+    const handleFocus = () => {
+      // Page gained focus, check if data needs reloading
+      handlePageNavigation()
+    }
+
+    // Add event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [loading, challenges.length])
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      console.log('Browser navigation detected, reloading data...')
+      fetchChallenges()
+      fetchCompletedChallenges()
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
   }, [])
   const checkForMaliciousCode = (code: string, language: string): MaliciousPattern[] => {
     const maliciousPatterns: MaliciousPattern[] = []

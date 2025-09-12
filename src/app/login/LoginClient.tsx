@@ -28,6 +28,13 @@ export default function LoginClient() {
         
         console.log('User signed in:', session.user)
         console.log('User metadata:', session.user.user_metadata)
+        console.log('User app_metadata:', session.user.app_metadata)
+        
+        // Extract avatar URL from Google metadata
+        const avatarFromMetadata = session.user.user_metadata?.avatar_url || 
+                                  session.user.user_metadata?.picture || 
+                                  session.user.user_metadata?.profile_picture
+        console.log('Avatar from metadata:', avatarFromMetadata)
         
         // Check if email ends with @student.uobabylon.edu.iq
         const userEmail = session.user.email
@@ -38,6 +45,15 @@ export default function LoginClient() {
           setIsLoading(false)
           return
         }
+        
+        // Generate fallback avatar using UI Avatars API
+        const userName = session.user.user_metadata?.full_name || 
+                        session.user.user_metadata?.name || 
+                        (userEmail ? userEmail.split('@')[0] : 'User')
+        const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=0D8ABC&color=fff&size=128`
+        
+        const finalAvatarUrl = avatarFromMetadata || fallbackAvatar
+        console.log('Final avatar URL:', finalAvatarUrl)
         
         // Check if user exists in our users table, if not create them
         try {
@@ -61,9 +77,7 @@ export default function LoginClient() {
               name: session.user.user_metadata?.full_name || 
                     session.user.user_metadata?.name || 
                     session.user.email?.split('@')[0],
-              avatar_url: session.user.user_metadata?.avatar_url || 
-                         session.user.user_metadata?.picture || 
-                         session.user.user_metadata?.profile_picture
+              avatar_url: finalAvatarUrl
             }
             
             console.log('User data to insert:', userData)
@@ -82,7 +96,29 @@ export default function LoginClient() {
               console.log('User created successfully')
             }
           } else {
-            console.log('User already exists')
+            console.log('User already exists, checking avatar...')
+            
+            // Check if user has avatar_url, if not update it
+            const { data: currentUser } = await supabase
+              .from('users')
+              .select('avatar_url')
+              .eq('id', session.user.id)
+              .single()
+            
+            if (!currentUser?.avatar_url || currentUser.avatar_url.trim() === '') {
+              console.log('Updating user avatar...')
+              
+              const { error: updateError } = await supabase
+                .from('users')
+                .update({ avatar_url: finalAvatarUrl })
+                .eq('id', session.user.id)
+              
+              if (updateError) {
+                console.error('Error updating avatar:', updateError)
+              } else {
+                console.log('User avatar updated successfully')
+              }
+            }
           }
         } catch (error) {
           console.error('Error checking/creating user:', error)

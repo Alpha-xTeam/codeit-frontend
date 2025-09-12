@@ -124,7 +124,7 @@ export default function LeaderboardPage() {
           return {
             ...user,
             challenges_completed: challenges?.length || 0,
-            avatar: user.avatar_url || (user.name || user.email)[0].toUpperCase(),
+            avatar: user.avatar_url && user.avatar_url.trim() !== '' ? user.avatar_url : null,
             streak: streak,
             trend: trend,
             selected_hat: user.selected_hat,
@@ -406,7 +406,7 @@ export default function LeaderboardPage() {
                               )}
                               
                               {/* Avatar */}
-                              {user.avatar && user.avatar.startsWith('http') && !user.avatarError ? (
+                              {user.avatar && user.avatar.trim() !== '' && !user.avatarError ? (
                                 <Image
                                   src={user.avatar}
                                   alt={user.name || user.email}
@@ -416,8 +416,8 @@ export default function LeaderboardPage() {
                                   onError={() => handleAvatarError(user.id)}
                                 />
                               ) : (
-                                <div className="relative w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                                  {user.avatar && !user.avatar.startsWith('http') ? user.avatar : (user.name || user.email)[0].toUpperCase()}
+                                <div className="relative w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg border-2 border-primary/20">
+                                  {(user.name || user.email || 'U')[0].toUpperCase()}
                                 </div>
                               )}
                               
@@ -463,7 +463,7 @@ export default function LeaderboardPage() {
         <div className="mt-12 glass p-8 rounded-3xl shadow-2xl border border-primary/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
-              {userAvatar && !userAvatar.includes('error') ? (
+              {userAvatar && userAvatar.trim() !== '' && !userAvatar.includes('error') ? (
                 <Image
                   src={userAvatar}
                   alt="Profile"
@@ -473,7 +473,7 @@ export default function LeaderboardPage() {
                   onError={() => setUserAvatar('')}
                 />
               ) : (
-                <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-lg border-2 border-primary/20">
                   <span className="text-white font-bold text-2xl">{user?.email?.[0].toUpperCase() || 'U'}</span>
                 </div>
               )}
