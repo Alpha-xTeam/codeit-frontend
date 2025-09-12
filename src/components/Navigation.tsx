@@ -233,8 +233,14 @@ export default function Navigation() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 mb-8 group" onClick={() => setIsSidebarOpen(false)}>
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Code className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform overflow-hidden">
+              <Image
+                src="/Code-it-Logo.png"
+                alt="Code-it Logo"
+                width={40}
+                height={40}
+                className="w-full h-full object-contain"
+              />
             </div>
             <span className="text-2xl font-bold gradient-text">Code-it</span>
           </Link>
