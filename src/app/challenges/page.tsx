@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
-import { CheckCircle, XCircle, Code, FileText, Target, Zap, AlertTriangle, Lightbulb } from 'lucide-react'
+import { CheckCircle, XCircle, Code, FileText, Target, Zap, AlertTriangle, Lightbulb, Settings, ZoomIn, ZoomOut, Palette, AlignLeft, Search, Replace, Save, RotateCcw } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { supabase } from '../../lib/supabase'
 import * as monaco from 'monaco-editor'
@@ -64,6 +64,32 @@ export default function ChallengesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
+
+  // Editor settings state
+  const [editorSettings, setEditorSettings] = useState({
+    fontSize: 14,
+    theme: 'custom-dark',
+    wordWrap: 'on' as 'on' | 'off',
+    minimap: false,
+    showToolbar: true,
+    autoSave: true,
+    allowMaliciousPaste: false
+  })
+  const [showSearchReplace, setShowSearchReplace] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const [replaceText, setReplaceText] = useState('')
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+
+  // Typing statistics
+  const [typingStats, setTypingStats] = useState({
+    charactersTyped: 0,
+    wordsTyped: 0,
+    linesTyped: 0,
+    errorsCount: 0,
+    startTime: null as Date | null,
+    typingSpeed: 0, // WPM
+    accuracy: 100 // percentage
+  })
 
   // Language-specific background elements
   const getLanguageBackgroundElements = (language: string) => {
@@ -455,19 +481,230 @@ export default function ChallengesPage() {
     }
   }, [])
 
-  const getHint = (language: string): string => {
+  const getHint = (language: string): { basic: string, advanced: string, examples: string[] } => {
     switch (language) {
       case 'javascript':
-        return 'Remember: Use &quot;function&quot; keyword, followed by the function name, parentheses (), curly braces {}, and a &quot;return&quot; statement with the string &quot;Hello, World!&quot;'
+        return {
+          basic: 'JavaScript functions use the "function" keyword, followed by a name, parentheses (), and curly braces {}. Remember to use "return" to send back a result.',
+          advanced: 'For string returns, use single or double quotes. Functions should be properly closed with matching braces.',
+          examples: [
+            'function hello() { return "Hello, World!"; }',
+            'const greeting = () => "Hello, World!";',
+            'function sayHello() { return \'Hello, World!\'; }'
+          ]
+        }
       case 'python':
-        return 'Remember: Use &quot;def&quot; keyword, followed by function name with parentheses (), a colon :, proper indentation, and a &quot;return&quot; statement'
+        return {
+          basic: 'Python functions use "def" keyword, followed by function name, parentheses (), and a colon. Code must be indented properly.',
+          advanced: 'Python is sensitive to indentation. Use 4 spaces for each indentation level. Functions end when indentation returns to the previous level.',
+          examples: [
+            'def hello():\n    return "Hello, World!"',
+            'def greeting():\n    message = "Hello, World!"\n    return message',
+            'def say_hello():\n    return "Hello, World!"'
+          ]
+        }
       case 'java':
-        return 'Remember: Use &quot;public static String&quot; for the method signature, followed by method name, parentheses (), curly braces {}, and a &quot;return&quot; statement'
+        return {
+          basic: 'Java methods need public static modifiers, return type (String), method name, parentheses (), and curly braces {}.',
+          advanced: 'Java is strongly typed - specify exact return types. Methods must be inside classes. Use proper semicolons.',
+          examples: [
+            'public static String hello() {\n    return "Hello, World!";\n}',
+            'public static String greeting() {\n    String message = "Hello, World!";\n    return message;\n}',
+            'public static String sayHello() {\n    return "Hello, World!";\n}'
+          ]
+        }
       case 'cpp':
-        return 'Remember: Use &quot;std::string&quot; as return type, followed by function name, parentheses (), curly braces {}, and a &quot;return&quot; statement'
+        return {
+          basic: 'C++ functions need return type (std::string), function name, parentheses (), and curly braces {}. Include necessary headers.',
+          advanced: 'Use std::string for string returns. Functions must be properly declared and defined. Remember semicolons after statements.',
+          examples: [
+            'std::string hello() {\n    return "Hello, World!";\n}',
+            'std::string greeting() {\n    std::string message = "Hello, World!";\n    return message;\n}',
+            'std::string sayHello() {\n    return "Hello, World!";\n}'
+          ]
+        }
       default:
-        return 'Check the expected code format and try to match it exactly'
+        return {
+          basic: 'Check the expected code format and try to match it exactly',
+          advanced: 'Pay attention to syntax rules for your chosen language',
+          examples: []
+        }
     }
+  }
+
+  // Editor control functions
+  const increaseFontSize = () => {
+    setEditorSettings(prev => ({
+      ...prev,
+      fontSize: Math.min(prev.fontSize + 2, 24)
+    }))
+    if (editorRef.current) {
+      editorRef.current.updateOptions({ fontSize: Math.min(editorSettings.fontSize + 2, 24) })
+    }
+  }
+
+  const decreaseFontSize = () => {
+    setEditorSettings(prev => ({
+      ...prev,
+      fontSize: Math.max(prev.fontSize - 2, 10)
+    }))
+    if (editorRef.current) {
+      editorRef.current.updateOptions({ fontSize: Math.max(editorSettings.fontSize - 2, 10) })
+    }
+  }
+
+  const toggleTheme = () => {
+    const newTheme = editorSettings.theme === 'custom-dark' ? 'vs-light' : 'custom-dark'
+    setEditorSettings(prev => ({
+      ...prev,
+      theme: newTheme
+    }))
+    if (editorRef.current) {
+      editorRef.current.updateOptions({ theme: newTheme })
+    }
+  }
+
+  const toggleWordWrap = () => {
+    const newWordWrap = editorSettings.wordWrap === 'on' ? 'off' : 'on'
+    setEditorSettings(prev => ({
+      ...prev,
+      wordWrap: newWordWrap
+    }))
+    if (editorRef.current) {
+      editorRef.current.updateOptions({ wordWrap: newWordWrap })
+    }
+  }
+
+  const formatCode = () => {
+    if (editorRef.current) {
+      editorRef.current.getAction('editor.action.formatDocument')?.run()
+      toast.success('Code formatted successfully!', {
+        duration: 2000,
+        style: {
+          background: 'linear-gradient(135deg, #10b981, #059669)',
+          color: '#fff',
+          borderRadius: '12px',
+          padding: '16px',
+          fontSize: '14px',
+          fontWeight: 'bold',
+        },
+        icon: '✨',
+      })
+    }
+  }
+
+  const saveCode = () => {
+    // Save to localStorage for persistence
+    localStorage.setItem(`challenge_${currentChallenge?.id}_code`, userCode)
+    setLastSaved(new Date())
+    toast.success('Code saved successfully!', {
+      duration: 2000,
+      style: {
+        background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+        color: '#fff',
+        borderRadius: '12px',
+        padding: '16px',
+        fontSize: '14px',
+        fontWeight: 'bold',
+      },
+      icon: '💾',
+    })
+  }
+
+  const resetCode = () => {
+    setUserCode('')
+    setIsCorrect(null)
+    setErrors([])
+    setSuggestions([])
+    toast.success('Code reset successfully!', {
+      duration: 2000,
+      style: {
+        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+        color: '#fff',
+        borderRadius: '12px',
+        padding: '16px',
+        fontSize: '14px',
+        fontWeight: 'bold',
+      },
+      icon: '🔄',
+    })
+  }
+
+  const goToLine = (line: number) => {
+    if (editorRef.current) {
+      editorRef.current.revealLine(line)
+      editorRef.current.setPosition({ lineNumber: line, column: 1 })
+      editorRef.current.focus()
+    }
+  }
+
+  const findAndReplace = () => {
+    if (!editorRef.current || !searchText) return
+
+    const model = editorRef.current.getModel()
+    if (!model) return
+
+    const matches = model.findMatches(searchText, false, false, false, null, false)
+    if (matches.length > 0) {
+      model.pushEditOperations([], [{
+        range: matches[0].range,
+        text: replaceText
+      }], () => null)
+
+      toast.success(`Replaced ${matches.length} occurrence(s)!`, {
+        duration: 2000,
+        style: {
+          background: 'linear-gradient(135deg, #10b981, #059669)',
+          color: '#fff',
+          borderRadius: '12px',
+          padding: '16px',
+          fontSize: '14px',
+          fontWeight: 'bold',
+        },
+        icon: '🔍',
+      })
+    } else {
+      toast.error('No matches found!', {
+        duration: 2000,
+        style: {
+          background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+          color: '#fff',
+          borderRadius: '12px',
+          padding: '16px',
+          fontSize: '14px',
+          fontWeight: 'bold',
+        },
+        icon: '❌',
+      })
+    }
+  }
+
+  const updateTypingStats = (newCode: string, oldCode: string) => {
+    const now = new Date()
+    const timeDiff = typingStats.startTime ? (now.getTime() - typingStats.startTime.getTime()) / 1000 / 60 : 0 // minutes
+
+    // Count words (approximate)
+    const words = newCode.trim().split(/\s+/).filter(word => word.length > 0).length
+    const lines = newCode.split('\n').length
+
+    // Calculate typing speed (WPM)
+    const typingSpeed = timeDiff > 0 ? Math.round(words / timeDiff) : 0
+
+    // Calculate accuracy (simple approximation)
+    const totalChars = newCode.length
+    const currentErrors = errors.length
+    const accuracy = totalChars > 0 ? Math.max(0, Math.round(((totalChars - currentErrors) / totalChars) * 100)) : 100
+
+    setTypingStats(prev => ({
+      ...prev,
+      charactersTyped: newCode.length,
+      wordsTyped: words,
+      linesTyped: lines,
+      errorsCount: currentErrors,
+      startTime: prev.startTime || now,
+      typingSpeed,
+      accuracy
+    }))
   }
 
   // Get current challenge based on selected language and current index
@@ -476,6 +713,76 @@ export default function ChallengesPage() {
 
   // Get challenges for current language
   const languageChallenges = challenges.filter(challenge => challenge.language === selectedLanguage)
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (editorSettings.autoSave && userCode && currentChallenge) {
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem(`challenge_${currentChallenge.id}_code`, userCode)
+        setLastSaved(new Date())
+      }, 2000) // Auto-save after 2 seconds of inactivity
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [userCode, currentChallenge, editorSettings.autoSave])
+
+  // Load saved code when challenge changes
+  useEffect(() => {
+    if (currentChallenge && editorSettings.autoSave) {
+      const savedCode = localStorage.getItem(`challenge_${currentChallenge.id}_code`)
+      if (savedCode && !userCode) {
+        setUserCode(savedCode)
+      }
+    }
+  }, [currentChallenge, editorSettings.autoSave])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + S: Save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        saveCode()
+      }
+
+      // Ctrl/Cmd + Shift + F: Format
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+        e.preventDefault()
+        formatCode()
+      }
+
+      // Ctrl/Cmd + F: Toggle search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !e.shiftKey) {
+        e.preventDefault()
+        setShowSearchReplace(!showSearchReplace)
+      }
+
+      // Ctrl/Cmd + Shift + R: Reset
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R') {
+        e.preventDefault()
+        resetCode()
+      }
+
+      // Ctrl/Cmd + Plus/Minus: Font size
+      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault()
+        increaseFontSize()
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+        e.preventDefault()
+        decreaseFontSize()
+      }
+
+      // Ctrl/Cmd + Shift + T: Toggle theme
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+        e.preventDefault()
+        toggleTheme()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showSearchReplace])
 
   // Show loading state
   if (loading) {
@@ -854,6 +1161,7 @@ export default function ChallengesPage() {
 
   const handleCodeChange = (value: string | undefined) => {
     const code = value || ''
+    const oldCode = userCode
     
     // Check for malicious code in real-time
     const maliciousPatterns = checkForMaliciousCode(code, selectedLanguage)
@@ -878,6 +1186,9 @@ export default function ChallengesPage() {
     }
     
     setUserCode(code)
+    
+    // Update typing statistics
+    updateTypingStats(code, oldCode)
     
     // Real-time validation
     validateCode(code)
@@ -986,32 +1297,33 @@ export default function ChallengesPage() {
     })
 
     editor.updateOptions({
-      theme: 'custom-dark',
-      fontSize: 14,
-      minimap: { enabled: false },
+      theme: editorSettings.theme,
+      fontSize: editorSettings.fontSize,
+      minimap: { enabled: editorSettings.minimap },
       lineNumbers: 'on',
       roundedSelection: false,
       scrollBeyondLastLine: false,
       automaticLayout: true,
       tabSize: 2,
-      wordWrap: 'on',
+      wordWrap: editorSettings.wordWrap,
       renderWhitespace: 'selection',
       bracketPairColorization: { enabled: true },
       guides: {
         bracketPairs: true,
         indentation: true
       },
-      contextmenu: false, // Disable context menu
-      selectOnLineNumbers: false, // Prevent line number selection
-      selectionHighlight: false, // Disable selection highlighting
-      occurrencesHighlight: "off", // Disable occurrence highlighting
-      codeLens: false, // Disable code lens
-      glyphMargin: false, // Disable glyph margin
-      folding: false, // Disable folding
-      renderLineHighlight: 'none', // Disable line highlighting
-      hideCursorInOverviewRuler: true, // Hide cursor in overview ruler
-      overviewRulerLanes: 0, // Disable overview ruler
-      overviewRulerBorder: false, // Disable overview ruler border
+      fontFamily: 'JetBrains Mono, Fira Code, Consolas, monospace',
+      contextmenu: false,
+      selectOnLineNumbers: false,
+      selectionHighlight: false,
+      occurrencesHighlight: "off",
+      codeLens: false,
+      glyphMargin: false,
+      folding: false,
+      renderLineHighlight: 'none',
+      hideCursorInOverviewRuler: true,
+      overviewRulerLanes: 0,
+      overviewRulerBorder: false,
     })
 
     // منع نسخ الكود
@@ -1059,28 +1371,30 @@ export default function ChallengesPage() {
         const pasteEvent = e as ClipboardEvent
         const pastedText = pasteEvent.clipboardData?.getData('text') || ''
         
-        // Check if pasted content contains malicious code
-        const maliciousPatterns = checkForMaliciousCode(pastedText, selectedLanguage)
-        if (maliciousPatterns.length > 0) {
-          e.preventDefault()
-          e.stopPropagation()
-          
-          // Show warning to user
-          toast.error('🚫 Security Violation: Malicious code detected in pasted content!', {
-            duration: 5000,
-            style: {
-              background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
-              color: '#fff',
-              borderRadius: '12px',
-              padding: '16px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              boxShadow: '0 10px 25px rgba(220, 38, 38, 0.3)',
-            },
-            icon: '⚠️',
-          })
-          
-          return false
+        // Check if pasted content contains malicious code (only if protection is enabled)
+        if (!editorSettings.allowMaliciousPaste) {
+          const maliciousPatterns = checkForMaliciousCode(pastedText, selectedLanguage)
+          if (maliciousPatterns.length > 0) {
+            e.preventDefault()
+            e.stopPropagation()
+            
+            // Show warning to user
+            toast.error('🚫 Security Violation: Malicious code detected in pasted content!', {
+              duration: 5000,
+              style: {
+                background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                color: '#fff',
+                borderRadius: '12px',
+                padding: '16px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                boxShadow: '0 10px 25px rgba(220, 38, 38, 0.3)',
+              },
+              icon: '⚠️',
+            })
+            
+            return false
+          }
         }
       })
       editorElement.addEventListener('contextmenu', (e: Event) => {
@@ -1399,8 +1713,29 @@ export default function ChallengesPage() {
                       <Lightbulb className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold text-primary mb-2">💡 Language-Specific Hint:</p>
-                      <p className="text-primary/80 leading-relaxed">{getHint(selectedLanguage)}</p>
+                      <p className="font-bold text-primary mb-3">💡 Language-Specific Hints:</p>
+                      <div className="space-y-4">
+                        <div>
+                          <p className="font-semibold text-primary mb-2">Basic Structure:</p>
+                          <p className="text-primary/80 leading-relaxed">{getHint(selectedLanguage).basic}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-primary mb-2">Advanced Tips:</p>
+                          <p className="text-primary/80 leading-relaxed">{getHint(selectedLanguage).advanced}</p>
+                        </div>
+                        {getHint(selectedLanguage).examples.length > 0 && (
+                          <div>
+                            <p className="font-semibold text-primary mb-2">Examples:</p>
+                            <div className="space-y-2">
+                              {getHint(selectedLanguage).examples.map((example, index) => (
+                                <pre key={index} className="bg-primary/5 p-3 rounded-lg text-sm font-mono text-primary border border-primary/20">
+                                  <code>{example}</code>
+                                </pre>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1480,6 +1815,233 @@ export default function ChallengesPage() {
               </div>
             </div>
 
+            {/* Editor Toolbar */}
+            <div className="bg-gradient-to-r from-card/80 to-card/60 p-4 rounded-2xl border border-border/50 mb-4 shadow-lg">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                {/* Font Size Controls */}
+                <div className="flex items-center space-x-1 bg-card/50 rounded-lg p-1">
+                  <button
+                    onClick={decreaseFontSize}
+                    className="p-2 hover:bg-primary/20 rounded-lg transition-colors group"
+                    title="Decrease font size"
+                  >
+                    <ZoomOut className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                  </button>
+                  <span className="px-3 py-1 text-sm font-mono bg-primary/10 text-primary rounded">
+                    {editorSettings.fontSize}px
+                  </span>
+                  <button
+                    onClick={increaseFontSize}
+                    className="p-2 hover:bg-primary/20 rounded-lg transition-colors group"
+                    title="Increase font size"
+                  >
+                    <ZoomIn className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                  </button>
+                </div>
+
+                {/* Theme Toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className="flex items-center space-x-2 px-3 py-2 bg-card/50 hover:bg-primary/20 rounded-lg transition-colors group"
+                  title="Toggle theme"
+                >
+                  <Palette className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                  <span className="text-sm text-muted-foreground group-hover:text-primary">
+                    {editorSettings.theme === 'custom-dark' ? 'Dark' : 'Light'}
+                  </span>
+                </button>
+
+                {/* Word Wrap Toggle */}
+                <button
+                  onClick={toggleWordWrap}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors group ${
+                    editorSettings.wordWrap === 'on'
+                      ? 'bg-primary/20 text-primary'
+                      : 'bg-card/50 hover:bg-primary/20 text-muted-foreground group-hover:text-primary'
+                  }`}
+                  title="Toggle word wrap"
+                >
+                  <span className="text-sm">Wrap</span>
+                </button>
+
+                {/* Format Code */}
+                <button
+                  onClick={formatCode}
+                  className="flex items-center space-x-2 px-3 py-2 bg-card/50 hover:bg-primary/20 rounded-lg transition-colors group"
+                  title="Format code"
+                >
+                  <AlignLeft className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                  <span className="text-sm text-muted-foreground group-hover:text-primary">Format</span>
+                </button>
+
+                {/* Save Code */}
+                <button
+                  onClick={saveCode}
+                  className="flex items-center space-x-2 px-3 py-2 bg-card/50 hover:bg-success/20 rounded-lg transition-colors group"
+                  title="Save code"
+                >
+                  <Save className="w-4 h-4 text-muted-foreground group-hover:text-success" />
+                  <span className="text-sm text-muted-foreground group-hover:text-success">Save</span>
+                </button>
+
+                {/* Reset Code */}
+                <button
+                  onClick={resetCode}
+                  className="flex items-center space-x-2 px-3 py-2 bg-card/50 hover:bg-warning/20 rounded-lg transition-colors group"
+                  title="Reset code"
+                >
+                  <RotateCcw className="w-4 h-4 text-muted-foreground group-hover:text-warning" />
+                  <span className="text-sm text-muted-foreground group-hover:text-warning">Reset</span>
+                </button>
+
+                {/* Allow Malicious Paste Toggle */}
+                <button
+                  onClick={() => {
+                    const newValue = !editorSettings.allowMaliciousPaste
+                    setEditorSettings(prev => ({
+                      ...prev,
+                      allowMaliciousPaste: newValue
+                    }))
+                    if (newValue) {
+                      toast.error('⚠️ Malicious code paste enabled - Use with caution!', {
+                        duration: 4000,
+                        style: {
+                          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                          color: '#fff',
+                          borderRadius: '12px',
+                          padding: '16px',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                        },
+                        icon: '⚠️',
+                      })
+                    } else {
+                      toast.success('🛡️ Malicious code protection re-enabled', {
+                        duration: 2000,
+                        style: {
+                          background: 'linear-gradient(135deg, #10b981, #059669)',
+                          color: '#fff',
+                          borderRadius: '12px',
+                          padding: '16px',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                        },
+                        icon: '🛡️',
+                      })
+                    }
+                  }}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors group ${
+                    editorSettings.allowMaliciousPaste
+                      ? 'bg-warning/20 text-warning border border-warning/50'
+                      : 'bg-card/50 hover:bg-primary/20 text-muted-foreground group-hover:text-primary'
+                  }`}
+                  title={editorSettings.allowMaliciousPaste ? "Disable malicious code protection" : "Allow malicious code paste (dangerous)"}
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-sm">
+                    {editorSettings.allowMaliciousPaste ? 'Protection Off' : 'Protected'}
+                  </span>
+                </button>
+
+                {/* Typing Statistics */}
+                {typingStats.charactersTyped > 0 && (
+                  <div className="text-xs text-muted-foreground bg-card/50 px-3 py-2 rounded-lg border">
+                    <div className="flex items-center space-x-2">
+                      <span>⚡ {typingStats.typingSpeed} WPM</span>
+                      <span>•</span>
+                      <span>🎯 {typingStats.accuracy}%</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Keyboard Shortcuts Help */}
+                <div className="relative group">
+                  <button
+                    className="p-2 bg-card/50 hover:bg-primary/20 rounded-lg transition-colors group"
+                    title="Keyboard shortcuts"
+                  >
+                    <Settings className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                  </button>
+                  <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block bg-card/95 backdrop-blur-sm border border-border/50 rounded-lg p-3 shadow-xl z-50 min-w-max">
+                    <div className="text-xs font-semibold text-foreground mb-2">Keyboard Shortcuts</div>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <div><kbd className="bg-primary/20 px-1 rounded">Ctrl+S</kbd> Save code</div>
+                      <div><kbd className="bg-primary/20 px-1 rounded">Ctrl+Shift+F</kbd> Format code</div>
+                      <div><kbd className="bg-primary/20 px-1 rounded">Ctrl+F</kbd> Find & replace</div>
+                      <div><kbd className="bg-primary/20 px-1 rounded">Ctrl+Shift+R</kbd> Reset code</div>
+                      <div><kbd className="bg-primary/20 px-1 rounded">Ctrl+/-</kbd> Font size</div>
+                      <div><kbd className="bg-primary/20 px-1 rounded">Ctrl+Shift+T</kbd> Toggle theme</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search & Replace Panel */}
+              {showSearchReplace && (
+                <div className="mt-4 pt-4 border-t border-border/50">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Search text..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        className="w-full px-3 py-2 bg-card/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Replace with..."
+                        value={replaceText}
+                        onChange={(e) => setReplaceText(e.target.value)}
+                        className="w-full px-3 py-2 bg-card/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+                    <button
+                      onClick={findAndReplace}
+                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors text-sm font-medium"
+                    >
+                      Replace
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Typing Statistics Panel */}
+            {typingStats.charactersTyped > 0 && (
+              <div className="bg-gradient-to-r from-card/80 to-card/60 p-4 rounded-2xl border border-border/50 mb-4 shadow-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold gradient-text">Typing Statistics</span>
+                  <button
+                    onClick={() => setTypingStats(prev => ({ ...prev, startTime: null, charactersTyped: 0, wordsTyped: 0, linesTyped: 0, errorsCount: 0, typingSpeed: 0, accuracy: 100 }))}
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-primary">{typingStats.charactersTyped}</div>
+                    <div className="text-xs text-muted-foreground">Characters</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-secondary">{typingStats.wordsTyped}</div>
+                    <div className="text-xs text-muted-foreground">Words</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-accent">{typingStats.typingSpeed}</div>
+                    <div className="text-xs text-muted-foreground">WPM</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-success">{typingStats.accuracy}%</div>
+                    <div className="text-xs text-muted-foreground">Accuracy</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-gradient-to-br from-card/80 to-card/60 rounded-2xl border border-border/50 overflow-hidden shadow-2xl" style={{ userSelect: 'none' }}>
               <MonacoEditor
                 height="300px"
@@ -1487,16 +2049,16 @@ export default function ChallengesPage() {
                 value={userCode}
                 onChange={handleCodeChange}
                 onMount={handleEditorDidMount}
-                theme="vs-dark"
+                theme={editorSettings.theme}
                 options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
+                  minimap: { enabled: editorSettings.minimap },
+                  fontSize: editorSettings.fontSize,
                   lineNumbers: 'on',
                   roundedSelection: false,
                   scrollBeyondLastLine: false,
                   automaticLayout: true,
                   tabSize: 2,
-                  wordWrap: 'on',
+                  wordWrap: editorSettings.wordWrap,
                   renderWhitespace: 'selection',
                   bracketPairColorization: { enabled: true },
                   guides: {
@@ -1537,14 +2099,24 @@ export default function ChallengesPage() {
                         <XCircle className="w-5 h-5 text-white" />
                       </div>
                       <span className="text-xl font-bold text-error">Errors Found</span>
+                      <span className="bg-error/20 text-error px-3 py-1 rounded-full text-sm font-semibold">
+                        {errors.length}
+                      </span>
                     </div>
                     <div className="space-y-3">
                       {errors.map((error, index) => (
-                        <div key={index} className="flex items-start space-x-3 text-sm bg-error/10 p-3 rounded-xl">
-                          <span className="text-error font-mono text-xs bg-error/20 px-2 py-1 rounded-lg border border-error/30">
+                        <div
+                          key={index}
+                          onClick={() => goToLine(error.line)}
+                          className="flex items-start space-x-3 text-sm bg-error/10 p-3 rounded-xl hover:bg-error/20 cursor-pointer transition-colors border border-error/20 hover:border-error/40"
+                        >
+                          <span className="text-error font-mono text-xs bg-error/20 px-2 py-1 rounded-lg border border-error/30 flex-shrink-0">
                             Line {error.line}
                           </span>
                           <span className="text-error flex-1">{error.message}</span>
+                          <div className="text-error/60 text-xs flex-shrink-0">
+                            Click to jump →
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1559,12 +2131,18 @@ export default function ChallengesPage() {
                         <Lightbulb className="w-5 h-5 text-white" />
                       </div>
                       <span className="text-xl font-bold text-warning">Suggestions</span>
+                      <span className="bg-warning/20 text-warning px-3 py-1 rounded-full text-sm font-semibold">
+                        {suggestions.length}
+                      </span>
                     </div>
                     <div className="space-y-3">
                       {suggestions.map((suggestion, index) => (
-                        <div key={index} className="flex items-start space-x-3 text-sm bg-warning/10 p-3 rounded-xl">
-                          <span className="text-warning text-lg">💡</span>
-                          <span className="text-warning flex-1">{suggestion}</span>
+                        <div
+                          key={index}
+                          className="flex items-start space-x-3 text-sm bg-warning/10 p-4 rounded-xl border border-warning/20 hover:bg-warning/20 transition-colors"
+                        >
+                          <span className="text-warning text-lg flex-shrink-0">💡</span>
+                          <span className="text-warning flex-1 leading-relaxed">{suggestion}</span>
                         </div>
                       ))}
                     </div>
