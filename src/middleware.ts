@@ -49,12 +49,12 @@ export async function middleware(req: NextRequest) {
   }
 
   if (user && req.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
+    return NextResponse.redirect(new URL('/challenges', req.url))
   }
 
   return response
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*', '/login'],
+  matcher: ['/', '/dashboard/:path*', '/login', '/challenges'],
 }

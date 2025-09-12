@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function LoginClient() {
-  const [redirectTo, setRedirectTo] = useState('/dashboard')
+  const [redirectTo, setRedirectTo] = useState('/challenges')
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -17,7 +17,7 @@ export default function LoginClient() {
     setMounted(true)
     // Set redirect URL on client side only
     if (typeof window !== 'undefined') {
-      setRedirectTo(`${window.location.origin}/dashboard`)
+      setRedirectTo(`${window.location.origin}/challenges`)
     }
 
     // Listen for auth state changes
@@ -91,9 +91,9 @@ export default function LoginClient() {
           return
         }
 
-        // Redirect to dashboard
-        console.log('Redirecting to dashboard...')
-        router.push('/dashboard')
+        // Redirect to challenges
+        console.log('Redirecting to challenges...')
+        router.push('/challenges')
       }
     })
 

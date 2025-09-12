@@ -1,7 +1,48 @@
+"use client"
+
 import Link from 'next/link'
 import { ArrowRight, Code, Trophy, Users, Zap, Target, Star } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-export default function Home() {
+function HomeContent() {
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          // Check if email is valid
+          const userEmail = session.user.email
+          if (userEmail && userEmail.endsWith('@student.uobabylon.edu.iq')) {
+            router.push('/challenges')
+            return
+          }
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    checkAuth()
+  }, [router])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -142,4 +183,8 @@ export default function Home() {
       </section>
     </div>
   )
+}
+
+export default function Home() {
+  return <HomeContent />
 }
