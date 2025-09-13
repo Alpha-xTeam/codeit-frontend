@@ -53,7 +53,7 @@ export default function ChallengesPage() {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showHint, setShowHint] = useState(false)
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([])
-  const [challenges, setChallenges] = useState<any[]>([])
+  const [challenges, setChallenges] = useState<Challenge[]>([])
   const [currentChallengeIndex, setCurrentChallengeIndex] = useState<{[key: string]: number}>({
     javascript: 0,
     python: 0,
