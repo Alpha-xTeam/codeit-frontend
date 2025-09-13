@@ -224,6 +224,8 @@ const LetterGlitch = ({
       {centerVignette && (
         <div className="absolute top-0 left-0 w-full h-full pointer-events-none bg-[radial-gradient(circle,_rgba(0,0,0,0.8)_0%,_rgba(0,0,0,0)_60%)]"></div>
       )}
+      {/* Dark overlay for better text contrast */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none bg-black/70"></div>
     </div>
   );
 };

@@ -9,6 +9,7 @@ import DecryptedText from '../components/DecryptedText'
 import LogoLoop from '../components/LogoLoop'
 import GradualBlur from '../components/GradualBlur'
 import CardSwap, { Card } from '../components/CardSwap'
+import LetterGlitch from '../components/LetterGlitch'
 
 
 function HomeContent() {
@@ -45,7 +46,19 @@ function HomeContent() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative">
+    <div className="min-h-screen relative">
+      {/* Letter Glitch Background */}
+      <div className="fixed inset-0 z-0">
+        <LetterGlitch
+          glitchColors={['#2b4539', '#61dca3', '#61b3dc']}
+          glitchSpeed={50}
+          centerVignette={false}
+          outerVignette={true}
+          smooth={true}
+          characters="ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$&*()-_+=/[]{};:<>.,0123456789"
+        />
+      </div>
+
       {/* Content Overlay */}
       <div className="relative z-10 min-h-screen">
         {/* Hero Section */}
