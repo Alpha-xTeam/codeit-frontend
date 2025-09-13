@@ -762,6 +762,9 @@ const MagicBento: React.FC<BentoProps> = ({
   clickEffect = true,
   enableMagnetism = true
 }) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const unusedProps = { textAutoHide, enableStars, enableSpotlight, enableBorderGlow, spotlightRadius, particleCount, enableTilt, clickEffect, enableMagnetism };
+
   const gridRef = useRef<HTMLDivElement>(null);
   const isMobile = useMobileDetection();
   const shouldDisableAnimations = disableAnimations || isMobile;

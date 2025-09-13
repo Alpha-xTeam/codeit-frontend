@@ -129,7 +129,7 @@ export default function Navigation() {
     if (typeof window !== 'undefined') {
       (window as Window & { updateUserPoints?: (points: number) => Promise<void> }).updateUserPoints = updateUserPoints
     }
-  }, [user, userPoints])
+  }, [updateUserPoints])
 
   useEffect(() => {
     // Get initial session

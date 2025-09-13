@@ -272,7 +272,7 @@ export default function StorePage() {
     } finally {
       setLoading(false)
     }
-  }, [setUserPoints, setSelectedHat, setSelectedAvatarFrame, setSelectedTextColor, setSelectedBackgroundEffect, setSelectedBadge, setPurchasedItems, setStoreItems, setLoading])
+  }, [])
 
   useEffect(() => {
     const getUser = async () => {

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
-import { CheckCircle, XCircle, Code, FileText, Target, Zap, AlertTriangle, Lightbulb, Settings, ZoomIn, ZoomOut, Palette, AlignLeft, Search, Replace, Save, RotateCcw } from 'lucide-react'
+import { CheckCircle, XCircle, Code, FileText, Target, Zap, AlertTriangle, Lightbulb, Settings, ZoomIn, ZoomOut, Palette, AlignLeft, Save, RotateCcw } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { supabase } from '../../lib/supabase'
 import * as monaco from 'monaco-editor'
@@ -53,17 +53,20 @@ export default function ChallengesPage() {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showHint, setShowHint] = useState(false)
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([])
-  const [loadingCompleted, setLoadingCompleted] = useState(true)
+  const [challenges, setChallenges] = useState<any[]>([])
   const [currentChallengeIndex, setCurrentChallengeIndex] = useState<{[key: string]: number}>({
     javascript: 0,
     python: 0,
     java: 0,
     cpp: 0
   })
-  const [challenges, setChallenges] = useState<Challenge[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
+
+  // Loading states
+  const [loadingCompleted, setLoadingCompleted] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
   // Editor settings state
   const [editorSettings, setEditorSettings] = useState({
@@ -78,7 +81,6 @@ export default function ChallengesPage() {
   const [showSearchReplace, setShowSearchReplace] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [replaceText, setReplaceText] = useState('')
-  const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
   // Typing statistics
   const [typingStats, setTypingStats] = useState({
@@ -776,7 +778,7 @@ export default function ChallengesPage() {
     }
   }
 
-  const updateTypingStats = (newCode: string, oldCode: string) => {
+  const updateTypingStats = (newCode: string) => {
     const now = new Date()
     const timeDiff = typingStats.startTime ? (now.getTime() - typingStats.startTime.getTime()) / 1000 / 60 : 0 // minutes
 
@@ -1258,7 +1260,6 @@ export default function ChallengesPage() {
 
   const handleCodeChange = (value: string | undefined) => {
     const code = value || ''
-    const oldCode = userCode
     
     // Check for malicious code in real-time
     const maliciousPatterns = checkForMaliciousCode(code, selectedLanguage)
@@ -1285,7 +1286,7 @@ export default function ChallengesPage() {
     setUserCode(code)
     
     // Update typing statistics
-    updateTypingStats(code, oldCode)
+    updateTypingStats(code)
     
     // Real-time validation
     validateCode(code)

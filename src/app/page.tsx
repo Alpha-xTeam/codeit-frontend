@@ -8,13 +8,12 @@ import { useRouter } from 'next/navigation'
 import DecryptedText from '../components/DecryptedText'
 import LogoLoop from '../components/LogoLoop'
 import GradualBlur from '../components/GradualBlur'
-import { MagicCard } from '../components/MagicBento'
 import CardSwap, { Card } from '../components/CardSwap'
 
 
 function HomeContent() {
   const [isLoading, setIsLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ email?: string } | null>(null)
   const router = useRouter()
 
   useEffect(() => {
