@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { MagicCard } from '../../components/MagicBento'
 import { supabase } from '../../lib/supabase'
 import { User } from '@supabase/supabase-js'
 import {
@@ -677,7 +678,10 @@ export default function DashboardPage() {
 
           {/* Enhanced Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <div className="group glass p-6 rounded-2xl hover-lift border border-blue-500/20 hover:border-blue-400/40 transition-all duration-300">
+            <MagicCard
+              className="group glass p-6 rounded-2xl hover-lift border border-blue-500/20 hover:border-blue-400/40 transition-all duration-300"
+              glowColor="59, 130, 246"
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Target className="w-6 h-6 text-white" />
@@ -691,9 +695,12 @@ export default function DashboardPage() {
                   <span>+12% from last month</span>
                 </div>
               </div>
-            </div>
+            </MagicCard>
 
-            <div className="group glass p-6 rounded-2xl hover-lift border border-purple-500/20 hover:border-purple-400/40 transition-all duration-300">
+            <MagicCard
+              className="group glass p-6 rounded-2xl hover-lift border border-purple-500/20 hover:border-purple-400/40 transition-all duration-300"
+              glowColor="147, 51, 234"
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Crown className="w-6 h-6 text-white" />
@@ -707,9 +714,12 @@ export default function DashboardPage() {
                   <span>Top 10% this week</span>
                 </div>
               </div>
-            </div>
+            </MagicCard>
 
-            <div className="group glass p-6 rounded-2xl hover-lift border border-green-500/20 hover:border-green-400/40 transition-all duration-300">
+            <MagicCard
+              className="group glass p-6 rounded-2xl hover-lift border border-green-500/20 hover:border-green-400/40 transition-all duration-300"
+              glowColor="34, 197, 94"
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Clock className="w-6 h-6 text-white" />
@@ -723,9 +733,12 @@ export default function DashboardPage() {
                   <span>This month</span>
                 </div>
               </div>
-            </div>
+            </MagicCard>
 
-            <div className="group glass p-6 rounded-2xl hover-lift border border-orange-500/20 hover:border-orange-400/40 transition-all duration-300">
+            <MagicCard
+              className="group glass p-6 rounded-2xl hover-lift border border-orange-500/20 hover:border-orange-400/40 transition-all duration-300"
+              glowColor="249, 115, 22"
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Flame className="w-6 h-6 text-white" />
@@ -739,7 +752,7 @@ export default function DashboardPage() {
                   <span>Keep it up! 🔥</span>
                 </div>
               </div>
-            </div>
+            </MagicCard>
           </div>
 
           {/* Weekly Progress Bar */}
@@ -839,13 +852,14 @@ export default function DashboardPage() {
               {achievements.map((achievement) => {
                 const Icon = iconMap[achievement.icon] || Target
                 return (
-                  <div
+                  <MagicCard
                     key={achievement.id}
                     className={`glass p-6 rounded-2xl border transition-all duration-300 ${
                       achievement.unlocked
                         ? 'border-yellow-500/30 bg-yellow-500/5'
                         : 'border-slate-600/30 bg-slate-800/30'
                     }`}
+                    glowColor={achievement.unlocked ? "234, 179, 8" : "71, 85, 105"}
                   >
                     <div className="flex items-center space-x-4 mb-4">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
@@ -880,7 +894,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </MagicCard>
                 )
               })}
             </div>
@@ -903,9 +917,10 @@ export default function DashboardPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {suggestedChallenges.map((challenge) => (
-                <div
+                <MagicCard
                   key={challenge.id}
                   className="group glass p-6 rounded-2xl hover-lift border border-slate-600/30 hover:border-blue-500/40 transition-all duration-300 cursor-pointer"
+                  glowColor="59, 130, 246"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-2">
@@ -932,7 +947,7 @@ export default function DashboardPage() {
                   <button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-2 px-4 rounded-lg font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-300 hover:scale-105">
                     Start Challenge
                   </button>
-                </div>
+                </MagicCard>
               ))}
             </div>
           </div>
